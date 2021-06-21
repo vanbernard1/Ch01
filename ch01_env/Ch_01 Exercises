@@ -1,0 +1,191 @@
+Solutions
+
+Thought exercises
+
+2. Is all data normally distributed?
+No. Even data that might appear to be normally distributed could belong to a different distribution. There are tests to check for normality, but this is beyond the scope of this book. You can read more here.
+
+When would it make more sense to use the median instead of the mean for the measure of center?
+When your data has outliers, it may make more sense to use the median over the mean as your measure of center.
+
+Coding exercises
+
+EXERCISE 4: GENERATE THE DATA
+In [1]:
+import random
+
+random.seed(0)
+salaries = [round(random.random()*1000000, -3) for _ in range(100)]
+
+EXERCISE 5: CALCULATING STATISTICS AND VERIFYING:
+
+MEAN
+In [2]:
+from statistics import mean
+
+sum(salaries) / len(salaries) == mean(salaries)
+
+Out[2]: True
+
+MEDIAN
+First, we define a function to calculate the median:
+
+In [3]:
+import math
+
+def find_median(x):
+    x.sort()
+    midpoint = (len(x) + 1) / 2 - 1 # subtract 1 bc index starts at 0
+    if len(x) % 2:
+        # x has odd number of values
+        return x[int(midpoint)]
+    else:
+        return (x[math.floor(midpoint)] + x[math.ceil(midpoint)]) / 2
+
+Then, we check its output matches the expected output:
+
+In [4]:
+from statistics import median
+
+find_median(salaries) == median(salaries)
+Out[4]:True
+
+MODE
+In [5]:
+from statistics import mode
+from collections import Counter
+
+Counter(salaries).most_common(1)[0][0] == mode(salaries)
+Out[5]:True
+
+SAMPLE VARIANCE
+Remember to use Bessel's correction.
+
+In [6]:
+from statistics import variance
+
+sum([(x - sum(salaries) / len(salaries))**2 for x in salaries]) / (len(salaries) - 1) == variance(salaries)
+Out[6]:True
+
+SAMPLE STANDARD DEVIATION
+Remember to use Bessel's correction.
+
+In [7]:
+from statistics import stdev
+import math
+
+math.sqrt(sum([(x - sum(salaries) / len(salaries))**2 for x in salaries]) / (len(salaries) - 1)) == stdev(salaries)
+Out[7]:True
+
+Exercise 6: Calculating more statistics
+
+RANGE
+In [8]:
+max(salaries) - min(salaries)
+Out[8]:
+995000.0
+coefficient of variation
+In [9]:
+from statistics import mean, stdev
+
+stdev(salaries) / mean(salaries)
+Out[9]:0.45386998894439035
+
+INTERQUARTILE RANGE
+First, we define function to calculate a quantile:
+
+In [10]:
+import math
+
+def quantile(x, pct):
+    x.sort()
+    index = (len(x) + 1) * pct - 1
+    if len(x) % 2:
+        # odd, so grab the value at index
+        return x[int(index)]
+    else:
+        return (x[math.floor(index)] + x[math.ceil(index)]) / 2
+Then, we check that it calculates the 1st quantile correctly:
+
+In [11]:
+sum([x < quantile(salaries, 0.25) for x in salaries]) / len(salaries) == 0.25
+Out[11]:True and the 3rd quantile:
+
+In [12]:
+sum([x < quantile(salaries, 0.75) for x in salaries]) / len(salaries) == 0.75
+Out[12]:True
+
+Finally, we can calculate the IQR:
+
+In [13]:
+q3, q1 = quantile(salaries, 0.75), quantile(salaries, 0.25)
+iqr = q3 - q1
+iqr
+Out[13]:417500.0
+
+QUARTILE COEFFICENT OF DISPERSION
+In [14]:
+iqr / (q1 + q3)
+Out[14]:0.3417928776094965
+
+Exercise 7: Scaling data
+
+MIN-MAX SCALING
+In [15]:
+min_salary, max_salary = min(salaries), max(salaries)
+salary_range = max_salary - min_salary
+
+min_max_scaled = [(x - min_salary) / salary_range for x in salaries]
+min_max_scaled[:5]
+Out[15]:
+[0.0,
+ 0.01306532663316583,
+ 0.07939698492462312,
+ 0.0814070351758794,
+ 0.08944723618090453]
+
+STANDARDIZING
+In [16]:
+from statistics import mean, stdev
+
+mean_salary, std_salary = mean(salaries), stdev(salaries)
+
+standardized = [(x - mean_salary) / std_salary for x in salaries]
+standardized[:5]
+Out[16]:
+[-2.199512275430514,
+ -2.150608309943509,
+ -1.9023266390094862,
+ -1.8948029520114855,
+ -1.8647082040194827]
+
+Exercise 8: Calculating covariance and correlation
+
+COVARIANCE
+We haven't covered NumPy yet, so this is just here to check our solution (0.26) — there will be rounding errors on our calculation:
+
+In [17]:
+import numpy as np
+np.cov(min_max_scaled, standardized)
+Out[17]:
+array([[0.07137603, 0.26716293],
+       [0.26716293, 1.        ]])
+Our method, aside from rounding errors, gives us the same answer as NumPy:
+
+In [18]:
+from statistics import mean
+
+running_total = [
+    (x - mean(min_max_scaled)) * (y - mean(standardized))
+    for x, y in zip(min_max_scaled, standardized)
+]
+
+cov = mean(running_total)
+cov
+Out[18]:0.26449129918250414
+
+PEARSON CORRELATION COEFFICIENT ($\rho$)
+In [19]:
+from statistics import stdev
+cov / (stdev(min_max_scaled) * stdev(standardized))
+Out[19]:0.9900000000000001
